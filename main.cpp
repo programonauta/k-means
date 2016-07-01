@@ -1,145 +1,189 @@
-// Author	David Robison
-// Date		4/20/2013
+/*
 
+   Implementation of k-means clustering algorithm
+
+   Forked from  David Robison repository at 
+              https://github.com/drobison/k-means
+
+
+   Ricardo Brandao 
+
+   Logbook
+
+   jul/01    repo forked
+             <math.h> included due sqrt function
+
+*/
 #include <iostream>
 #include <fstream>
 #include <string>
 #include <algorithm>
+#include <math.h>
 
 using namespace std;
 
 ifstream infile;
 ofstream outfile;
 
-double x[1000], y[1000], assignedto[1000];
-double centroidx[10], centroidy[10];
-double oldcentroidx[10], oldcentroidy[10];
-int k = 2;				// k = number of centroids
-int centroidcount[10];
-int dataCount = 0;
+// Class to represent points 
 
-double calculateDistance(double x, double y, double x1, double y1);
-void assignCentroid(double x, double y, int point);
+class Point {
+
+  public:
+    double x, y;
+    int centroidAssigned; // centroid assigned to point
+    
+    // Constructor with default values 0.0, 0.0
+    Point(double x=0.0, double y=0.0):x(x),y(y) {};
+
+    // Method to calculate the distance to another point
+
+    double dist(Point other) {
+      double xd = x - other.x;
+      double yd = y - other.y;
+      return sqrt(xd*xd + yd*yd);
+    };
+};
+
+// Operator << 
+ostream& operator<< (ostream&out, const Point& p) {
+  out << "( " << p.x << ", " << p.y << " )";
+  return out;
+}
+
+Point items[1000];
+Point centroid[10];
+Point oldCentroid[10];
+
+int k = 2;   // k = number of centroids
+int centroidCount[10];  // number of items by centroid
+int dataCount = 0;  // dataCount = number of lines input.txt
+
+void assignCentroid(Point* item, int point);
 void calculateNewCentroid();
 
 int main()
 {
-	string input = "input.txt";
-	string output = "output.txt";
+  string input = "input.txt";
+  string output = "output.txt";
 
-	dataCount = 0;
+  dataCount = 0;
 
-	outfile.open(output.c_str());
+  outfile.open(output.c_str());
 
-	// Read in input.
-	infile.open(input.c_str());
-	if (!infile)
-	{
-		cout << "Unable to open input."<< endl;
-	}
-	while(!infile.eof())		
-	{
-		infile >> x[dataCount] >> y[dataCount];
-		dataCount++;
-	}
+  // Read in input.
+  infile.open(input.c_str());
+  if (!infile)
+  {
+    cout << "Unable to open input."<< endl;
+  }
+  while(!infile.eof())		
+  {
+    infile >> items[dataCount].x >> items[dataCount].y;
+    dataCount++;
+  }
 
-	infile.close();
+  // Close input file
+  infile.close();
 
-	// Chose initial centroids.  Hard coding for testing but can/should be random per requirements.
-	for( int i=0; i<k; i++)
-	{
-		centroidx[i] = x[i];
-		centroidy[i] = y[i];
+  // Chose initial centroids.  Hard coding for testing but can/should be random per requirements.
+  for( int i=0; i<k; i++)
+  {
+    centroid[i] = items[i];
 
-		// For debugging
-		cout << "Centroid " << i << ": [" << centroidx[i] << ", " << centroidy[i] << "]" << endl;
-		outfile << "Centroid " << i << ": [" << centroidx[i] << ", " << centroidy[i] << "]" << endl;
-	}
+    // For debugging
+    cout << "Centroid " << i << ", "<< centroid[i] << endl;
+    outfile << "Centroid " << i << ", " << centroid[i] << endl;
+  }
 
-	// Assign points to centroids based on closest mean
-	for( int i=0; i<dataCount; i++)
-	{
-		assignCentroid( x[i], y[i], i );
-	}
+  // Read all points and calculate the closest centroid
+  // Assign points to centroids based on closest mean
+  for( int i=0; i<dataCount; i++)
+  {
+    assignCentroid( &items[i], i );
+  }
 
-	//for( int i=0; i<k; i++)
-	//{
-	//	cout << centroidcount[i] << endl;
-	//}
-	// Open output
+  // Show items by centroid
+  for( int i=0; i<k; i++)
+  {
+    cout << "Number of items centroid " << i << ": " << centroidCount[i] << endl;
+  }
+  // Open output
 
-	for( int i=0; i<4; i++)
-	{
-		calculateNewCentroid();
-		for( int i=0; i<dataCount; i++)
-		{
-			assignCentroid( x[i], y[i], i );
-		}
-	}
+  for( int i=0; i<4; i++)
+  {
+    calculateNewCentroid();
+    for( int i=0; i<dataCount; i++)
+    {
+      assignCentroid( &items[i], i );
+    }
+  }
 
-	outfile.close();
+  outfile.close();
 
-	cin >> x[0];
 }
 
-double calculateDistance(double x, double y, double x1, double y1)
+void assignCentroid(Point* item, int point)
 {
-	double part1 = (x - x1) * (x - x1);
-	double part2 = (y - y1) * (y - y1);
-	double answer = sqrt(part1+part2);
+  double smallest = 999;
+  int chosenCentroid = k+1;
 
-	return answer;
-}
+  // iterate all centroids (k)
+  for( int i=0; i<k; i++)
+  {
+    // calculate distance from point item to centroid[i]
+    double distanceToCentroid = item->dist(centroid[i]);
 
-void assignCentroid(double x, double y, int point)
-{
-	double smallest = 999;
-	int chosenCentroid = 999;
+    if( distanceToCentroid < smallest )
+    {
+      smallest = distanceToCentroid;
+      chosenCentroid = i;
+    }
+  }
+  
+  item->centroidAssigned = chosenCentroid;
+  centroidCount[chosenCentroid]++;
 
-	for( int i=0; i<k; i++)
-	{
-		double distanceToCentroid = calculateDistance(x, y, centroidx[i], centroidy[i]);
-		
-		if( distanceToCentroid < smallest )
-		{
-			smallest = distanceToCentroid;
-			chosenCentroid = i;
-		}
-	}
-	assignedto[point] = chosenCentroid;
-	centroidcount[chosenCentroid]++;
 }
 
 void calculateNewCentroid()
 {
-	for( int i=0; i<k; i++)
-	{
-		cout << endl;
-		outfile << endl;
 
-		oldcentroidx[i] = centroidx[i];
-		oldcentroidy[i] = centroidy[i];
+  // iterate centroids (k = number of centroids)
+  for( int i=0; i<k; i++)
+  {
+    cout << endl;
+    outfile << endl;
 
-		double xsum = 0;
-		double ysum = 0;
-		double count = 0;
+    // save old k th centroid
+    oldCentroid[i] = centroid[i];
 
-		for( int j=0; j < dataCount; j++)
-		{
-			if(assignedto[j] == i)
-			{
-				xsum += x[j];
-				ysum += y[j];
-				count++;
-			}
-		}
-		centroidx[i] = xsum / count;
-		centroidy[i] = ysum / count;
+    double xsum = 0;
+    double ysum = 0;
+    double count = 0;
 
-		double movement = calculateDistance(oldcentroidx[i], oldcentroidy[i], centroidx[i], centroidy[i]);
+    // Calculate center of mass of centroid k, calculating average of x and y
+    // Iterate items
+    for( int j=0; j < dataCount; j++)
+    {
+      // verifiy if item[j] was assigned to centroid k
+      if(items[j].centroidAssigned == i)
+      {
+        xsum += items[j].x;
+        ysum += items[j].y;
+        count++;
+      }
+    }
 
-		cout << "Centroid " << i << ": [" << centroidx[i] << ", " << centroidy[i] << "]" << endl;
-		outfile << "Centroid " << i << ": [" << centroidx[i] << ", " << centroidy[i] << "]" << endl;
-		cout << "Centroid moved " << movement << endl;
-	}
+    // Calculate new coordinate of centroid i
+    centroid[i].x = xsum / count;
+    centroid[i].y = ysum / count;
+
+    // Calculate distance btw new centroid to old centroid
+    double movement = centroid[i].dist(oldCentroid[i]);
+
+    cout << "New Centroid " << i << ":" << centroid[i] << endl;
+    outfile << "New Centroid " << i << ":" << centroid[i] << endl;
+    cout << "Centroid moved " << movement << endl;
+  }
 }
