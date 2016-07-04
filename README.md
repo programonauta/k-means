@@ -14,4 +14,4 @@ To run
 
 The points are read from input.txt file, where each line must have one point with x and y values separated by spaces.
 
-In this version, the number of centroid is hardcoded in two, and the first two centroids are not randomly chosen, but the first two.
+In this version, the number of centroid is hardcoded in four

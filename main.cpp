@@ -55,7 +55,7 @@ Point items[1000];
 Point centroid[10];
 Point oldCentroid[10];
 
-int k = 2;   // k = number of centroids
+int k = 4;   // k = number of centroids
 int centroidCount[10];  // number of items by centroid
 int dataCount = 0;  // dataCount = number of lines input.txt
 
@@ -66,6 +66,9 @@ int main()
 {
   string input = "input.txt";
   string output = "output.txt";
+
+  double minX = 9.99e+20, minY = 9.99e+20;
+  double maxX = 0, maxY = 0;
 
   dataCount = 0;
 
@@ -80,16 +83,23 @@ int main()
   while(!infile.eof())		
   {
     infile >> items[dataCount].x >> items[dataCount].y;
+    if (items[dataCount].x > maxX) maxX = items[dataCount].x;
+    if (items[dataCount].x < minX) minX = items[dataCount].x;
+    if (items[dataCount].y > maxY) maxY = items[dataCount].y;
+    if (items[dataCount].y < minY) minY = items[dataCount].y;
     dataCount++;
   }
 
   // Close input file
   infile.close();
 
+  srand (time(NULL));
+
   // Chose initial centroids.  Hard coding for testing but can/should be random per requirements.
   for( int i=0; i<k; i++)
   {
-    centroid[i] = items[i];
+    centroid[i].x = (double)(rand() % (((int)(maxX * 1000) - (int)(minX * 1000)) + (int)(minX * 1000))) / 1000;
+    centroid[i].y = (double)(rand() % (((int)(maxY * 1000) - (int)(minY * 1000)) + (int)(minY * 1000))) / 1000;
 
     // For debugging
     cout << "Centroid " << i << ", "<< centroid[i] << endl;
@@ -140,7 +150,7 @@ void assignCentroid(Point* item, int point)
       chosenCentroid = i;
     }
   }
-  
+
   item->centroidAssigned = chosenCentroid;
   centroidCount[chosenCentroid]++;
 
